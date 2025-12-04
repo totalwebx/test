@@ -1,17 +1,58 @@
-// index.js
 const express = require("express");
+const { MongoClient } = require("mongodb");
+
+// ---- MongoDB Atlas URI ----
+const uri = "mongodb+srv://orientdevv_db_user:ZqBdYlDTKJYfE8sx@cluster0.zaqxpse.mongodb.net/?appName=Cluster0";
+
+// ---- App setup ----
 const app = express();
+const client = new MongoClient(uri);
 
-const PORT = process.env.PORT || 3000;
+async function start() {
+  try {
+    await client.connect();
+    console.log("✅ Connected to MongoDB!");
 
-app.get("/", (req, res) => {
-  res.send("Hello from Node.js on Vercel 🚀");
-});
+    const dbName = "test";  // <-- change if needed
+    const db = client.db(dbName);
 
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "nshufu hadshi wash khdam" });
-});
+    // ---- Home route ----
+    app.get("/", async (req, res) => {
+      try {
+        const collections = await db.listCollections().toArray();
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+        let html = `
+          <h1>MongoDB Database Info</h1>
+          <p><strong>Database:</strong> ${dbName}</p>
+          <h2>Collections & Document Count</h2>
+          <ul>
+        `;
+
+        // Fetch each collection count
+        for (const col of collections) {
+          const collection = db.collection(col.name);
+          const count = await collection.countDocuments();
+
+          html += `<li><strong>${col.name}</strong> → ${count} documents</li>`;
+        }
+
+        html += "</ul>";
+
+        res.send(html);
+
+      } catch (err) {
+        res.send(`<p style="color:red;">Error fetching collections: ${err}</p>`);
+      }
+    });
+
+    // ---- Start server ----
+    app.listen(3000, () => {
+      console.log("🚀 Server running on http://localhost:3000");
+    });
+
+  } catch (err) {
+    console.error("❌ Connection error:", err);
+  }
+}
+
+start();
